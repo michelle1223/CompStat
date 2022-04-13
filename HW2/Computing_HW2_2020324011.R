@@ -1,0 +1,536 @@
+# Computational Statistics HW2: Chapter 3
+# Example 3.3, 3.4, 3.5 / Question 3-1, 3-3, 3-4 (a)(b)(c-i,ii)
+
+current_path = rstudioapi::getActiveDocumentContext()$path
+setwd(dirname(current_path))
+baseball <- read.table("baseball.dat", header=TRUE)
+
+# Example 3.3
+baseball$freeagent = factor(baseball$freeagent)
+baseball$arbitration = factor(baseball$arbitration)
+baseball.sub = baseball[, -1]
+salary.log = log(baseball$salary)
+n = length(salary.log)
+m = length(baseball.sub[1,])
+num = 5
+runs = matrix(0, num, m)
+iter = 15
+runs.aic = matrix(0, num, iter)
+
+set.seed(123) 
+for(i in 1:num){runs[i,] = rbinom(m,1,.5)}
+
+for(k in 1:num){
+  run.current = runs[k,]
+  # iterates each random start
+  for(j in 1:iter){
+    run.vars = baseball.sub[,run.current==1]
+    g = lm(salary.log~.,run.vars)
+    run.aic = extractAIC(g)[2]
+    run.next = run.current
+    # tests all models in 1-neighborhood and selects the model with lowest AIC
+    for(i in 1:m){
+      run.step = run.current
+      run.step[i] = !run.current[i]
+      run.vars = baseball.sub[,run.step==1]
+      g = lm(salary.log~.,run.vars)
+      run.step.aic = extractAIC(g)[2]
+      if(run.step.aic < run.aic){
+        run.next = run.step
+        run.aic = run.step.aic
+      }
+    }
+    run.current = run.next
+    runs.aic[k,j]=run.aic
+  }
+  runs[k,] = run.current
+}
+
+## Output: lists of predictors and AIC values
+runs
+runs.aic
+
+## Plotting
+plot(1:(iter*num), -c(t(runs.aic)), xlab="Cumulative Iterations",
+     ylab="Negative AIC", ylim=c(360,420), type="n")
+for(i in 1:num) {
+  lines((i-1)*iter+(1:iter), -runs.aic[i,]) }
+
+
+# Question 3-1
+m = ncol(baseball)-1
+num = 5
+runs = matrix(0, num, m)
+iter = 15
+runs.aic = matrix(0, num, iter)
+
+set.seed(123)
+for(i in 1:num){runs[i,] = rbinom(m, 1, 0.5)}
+
+# Local search, 1-neighbor
+for(k in 1:num){
+  run.current = runs[k,]  # mod == run.current
+  # iterates each random start
+  for(l in 1:iter){
+    run.vars = baseball.sub[, run.current==1]  # base1 == run.vars
+    g = lm(salary.log~., run.vars)  # fit == g
+    run.aic = extractAIC(g)[2]  # run.aic == AIC_opt == AIC_seq
+    run.next = run.current
+    numcal = 1
+    more = TRUE
+    # immediate adoption of first randomly selected downhill neighbor
+    while(more) {
+      ind = sample(1:m, m)
+      i = 0
+      more2 = TRUE
+      while(more2){
+        i = i+1
+        j = ind[i]
+        run.step = run.current
+        run.step[j] = 1 - run.step[j]
+        run.vars = baseball.sub[, run.step==1]
+        g = lm(salary.log~., data=run.vars)
+        run.step.aic = extractAIC(g)[2]
+        numcal = numcal+1
+        if((run.step.aic < run.aic) | (i==m))
+          more2 = FALSE
+      }
+      more = FALSE
+      if(run.step.aic < run.aic) {
+        more = TRUE
+        run.next[j] = 1-run.next[j]
+        run.aic = run.step.aic
+      }
+    }
+    run.current = run.next
+    runs.aic[k,l] = run.aic
+  }
+  runs[k,] = run.current
+}
+
+## Result & Plot
+runs.aic
+plot(1:(iter*num), -c(t(runs.aic)), xlab="Cumulative Iterations",
+     ylab="Negative AIC", ylim=c(360,420), type="n")
+for(i in 1:num) {
+  lines((i-1)*iter+(1:iter), -runs.aic[i,]) }
+
+
+# b) Local search, 2-neighbor
+n = length(salary.log)
+m = length(baseball.sub[1,])
+num = 5
+runs = matrix(0, num, m)
+iter = 15
+runs.aic = matrix(0, num, iter)
+
+set.seed(123) 
+for(i in 1:num){runs[i,] = rbinom(m,1,.5)}
+
+for(k in 1:num){
+  run.current = runs[k,]
+  # iterates each random start
+  for(j in 1:iter){
+    run.vars = baseball.sub[,run.current==1]
+    g = lm(salary.log~.,run.vars)
+    run.aic = extractAIC(g)[2]
+    run.next = run.current
+    # tests all models in 2-neighborhood and selects the model with lowest AIC
+    for(i in 1:m){
+      run.step = run.current
+      pos = sample(1:m, 2)
+      run.step[pos[1]] = 1-run.step[pos[1]]
+      run.step[pos[2]] = 1-run.step[pos[2]]
+      run.vars = baseball.sub[, run.step==1]
+      g = lm(salary.log~.,run.vars)
+      run.step.aic = extractAIC(g)[2]
+      if(run.step.aic < run.aic){
+        run.next = run.step
+        run.aic = run.step.aic
+      }
+    }
+    run.current = run.next
+    runs.aic[k,j]=run.aic
+  }
+  runs[k,] = run.current
+}
+
+## Result & Plot
+runs.aic
+plot(1:(iter*num), -c(t(runs.aic)), xlab="Cumulative Iterations",
+     ylab="Negative AIC", ylim=c(360,420), type="n")
+for(i in 1:num) {
+  lines((i-1)*iter+(1:iter), -runs.aic[i,]) }
+
+
+# Example 3.4
+baseball$freeagent = factor(baseball$freeagent)
+baseball$arbitration = factor(baseball$arbitration)
+baseball.sub = baseball[, -1]
+salary.log = log(baseball$salary)
+n = length(salary.log)
+m = length(baseball.sub[1,])
+cooling = c(rep(60,5), rep(120,5), rep(220,5))
+tau_start = 10
+tau = rep(tau_start, 15)
+aics = NULL
+
+set.seed(123)
+run = rbinom(m, 1, 0.5)
+run.current = run
+run.vars = baseball.sub[, run.current==1]
+g = lm(salary.log~., run.vars)
+run.aic = extractAIC(g)[2]
+best.aic = run.aic
+aics = run.aic
+for(j in 2:15) {tau[j] = 0.9*tau[j-1]}
+
+for(j in 1:15) {
+  for(i in 1:cooling[j]) {
+    pos = sample(1:m,1)
+    run.step = run.current
+    run.step[pos] = !run.current[pos]
+    run.vars = baseball.sub[,run.step==1]
+    g = lm(salary.log~.,run.vars)
+    run.step.aic = extractAIC(g)[2]
+    p = min(1,exp((run.aic-extractAIC(g)[2])/tau[j]))
+    if(run.step.aic < run.aic){
+      run.current = run.step
+      run.aic = run.step.aic}
+    if(rbinom(1,1,p)){
+      run.current = run.step
+      run.aic = run.step.aic}
+    if(run.step.aic < best.aic){
+      run = run.step
+      best.aic = run.step.aic}
+    aics = c(aics,run.aic)
+  }
+}
+
+## Output
+run 		# Best list of predictors found
+best.aic 	# Best AIC value
+aics		# AIC values
+
+## Plot of AIC values
+plot(aics, ylim=c(-420,-360), type="n", ylab="AIC", xlab="Iteration")
+lines(aics)
+(1:2001)[aics==min(aics)]
+
+
+# Question 3-3
+salary.log = log(baseball$salary)
+m = length(baseball.sub[1,])
+cooling = c(rep(60,4), rep(120,5), rep(220,6))  # compared to the previous example 3.4, 
+# giving different durations at each temperature gave similar results
+tau_start = 10
+tau = rep(tau_start, 15)
+aics = NULL
+
+set.seed(123)
+run = sample(c(0,1), m, replace=TRUE)  # run == mod
+run.current = run
+run.vars = baseball.sub[, run.current==1]  # run.vars == base1
+idx1 = c(1:m)[run==1]
+fit = lm(salary.log~., run.vars)  # g == fit
+run.aic = extractAIC(fit)[2]
+best.aic = run.aic
+aics = run.aic
+for(j in 2:15) {tau[j] = 0.9*tau[j-1]}
+
+# b. 2-neighborhoods
+for(j in 1:15) {
+  for(i in 1:cooling[j]) {
+    run.step = run.current
+    pos1 = sample(1:m, 1)
+    pos2 = sample(1:m, 1)
+    run.step[pos1] = 1-run.step[pos1]
+    run.step[pos2] = 1-run.step[pos2]
+    idx2 = c(1:m)[run.step==1]
+    run.vars = baseball.sub[,run.step==1]
+    fit2 = lm(salary.log~., data=run.vars)
+    run.step.aic = extractAIC(fit2)[2]  #run.step.aic == AIC2
+    p = min(1, exp((run.aic-extractAIC(fit2)[2])/tau[j]))
+    if(run.step.aic < run.aic){
+      run.current = run.step
+      run.aic = run.step.aic}
+    if(run.step.aic < best.aic){
+      run = run.step
+      best.aic = run.step.aic}
+    aics = c(aics, run.aic)
+  }
+}
+
+## Output
+run 		# Best list of predictors found
+best.aic 	# Best AIC value
+aics		# AIC values
+
+# b. 3-neighborhoods
+for(j in 1:15) {
+  for(i in 1:cooling[j]) {
+    run.step = run.current
+    pos1 = sample(1:m, 1)
+    pos2 = sample(1:m, 1)
+    pos3 = sample(1:m, 1)
+    run.step[pos1] = 1-run.step[pos1]
+    run.step[pos2] = 1-run.step[pos2]
+    run.step[pos3] = 1-run.step[pos3]
+    idx2 = c(1:m)[run.step==1]
+    run.vars = baseball.sub[,run.step==1]
+    fit2 = lm(salary.log~., data=run.vars)
+    run.step.aic = extractAIC(fit2)[2]  #run.step.aic == AIC2
+    p = min(1, exp((run.aic-extractAIC(fit2)[2])/tau[j]))
+    if(run.step.aic < run.aic){
+      run.current = run.step
+      run.aic = run.step.aic}
+    if(run.step.aic < best.aic){
+      run = run.step
+      best.aic = run.step.aic}
+    aics = c(aics, run.aic)
+    }
+}
+
+## Output
+run 		# Best list of predictors found
+best.aic 	# Best AIC value
+aics		# AIC values
+
+## Plot of AIC values
+plot(aics, ylim=c(-420,-360), type="n", ylab="AIC", xlab="Iteration")
+lines(aics)
+
+
+# Example 3.5
+baseball <- read.table("baseball.dat", header=TRUE)
+baseball$freeagent = factor(baseball$freeagent)
+baseball$arbitration = factor(baseball$arbitration)
+baseball.sub = baseball[, -1]
+salary.log = log(baseball$salary)
+P = 20
+m = ncol(baseball)-1
+iter = 100
+mu = 0.01
+r = matrix(0, P, 1)
+phi = matrix(0, P, 1)
+runs = matrix(0, P, m)
+runs.next = matrix(0, P, m)
+runs.aic = matrix(0, P, 1)
+aics = matrix(0, P, iter)
+run = NULL
+best.aic = 0
+best.aic.gen = rep(0, iter)
+
+## Initialization
+set.seed(123) 
+for(i in 1:P) {
+  runs[i, ] = rbinom(m, 1, 0.5)
+  run.vars = baseball.sub[, runs[i,]==1]
+  g = lm(salary.log~., run.vars)
+  runs.aic[i] = extractAIC(g)[2]
+  aics[i, 1] = runs.aic[i]
+  if(runs.aic[i] < best.aic){
+    run = runs[i, ]
+    best.aic = runs.aic[i]
+  }
+}
+r = rank(-runs.aic)
+phi = 2*r/(P*(P+1))
+best.aic.gen[1] = best.aic
+
+# Process: one parent with probability proportional to fitness, other random
+for(j in 1:iter-1) {
+  for(i in 1:10){
+    rownum = sample(1:P, 1, prob=phi)
+    parent.1 = runs[rownum, ]
+    runs1 = runs[-c(rownum), ]
+    rownames(runs1) <- 1:nrow(runs1)
+    parent.2 = runs1[sample(1:(P-1), 1), ]
+    pos = sample(1:(m-1), 1)
+    mutate = rbinom(m, 1, mu)
+    runs.next[i,] = c(parent.1[1:pos], parent.2[(pos+1):m])
+    runs.next[i,] = (runs.next[i,] + mutate)%%2
+    mutate = rbinom(m, 1, mu)
+    runs.next[P+1-i,] = c(parent.2[1:pos],parent.1[(pos+1):m])
+    runs.next[P+1-i,] = (runs.next[P+1-i,] + mutate)%%2
+  }
+  runs = runs.next
+  
+  for(i in 1:P) {
+    run.vars = baseball.sub[, runs[i,]==1]
+    g = lm(salary.log~., run.vars)
+    runs.aic[i] = extractAIC(g)[2]
+    aics[i, j+1] = runs.aic[i]
+    if(runs.aic[i] < best.aic) {
+      run = runs[i,]
+      best.aic = runs.aic[i]
+    }
+  }
+  best.aic.gen[j+1] = best.aic
+  r = rank(-runs.aic)
+  phi = 2*r/(P*(P+1))
+}
+
+## Output
+run 		# Best list of predictors found
+best.aic 	# AIC value
+
+## Plotting AIC values
+plot(-aics, xlim=c(0, iter), ylim=c(50,425), type="n", ylab="Negative AIC",
+     xlab="Generation", main="AIC Values For Genetic Algorithm")
+for(i in 1:iter) {points(rep(i,P), -aics[,i], pch=20, cex=0.5)}
+
+
+# Question 3.4. (a),(b)
+baseball <- read.table("baseball.dat", header=TRUE)
+baseball$freeagent = factor(baseball$freeagent)
+baseball$arbitration = factor(baseball$arbitration)
+baseball.sub = baseball[, -1]
+salary.log = log(baseball$salary)
+mu = 0.01
+P = 10
+r = matrix(0, P, 1)
+phi = matrix(0, P, 1)
+runs = matrix(0, P, m)
+runs.next = matrix(0, P, m)
+runs.aic = matrix(0, P, 1)
+aics = matrix(0, P, iter)
+run = NULL
+best.aic = 0
+best.aic.gen = rep(0, iter)
+
+## Initialization
+set.seed(123) 
+for(i in 1:P) {
+  runs[i, ] = rbinom(m, 1, 0.5)
+  run.vars = baseball.sub[, runs[i,]==1]
+  g = lm(salary.log~., run.vars)
+  runs.aic[i] = extractAIC(g)[2]
+  aics[i, 1] = runs.aic[i]
+  if(runs.aic[i] < best.aic){
+    run = runs[i, ]
+    best.aic = runs.aic[i]
+  }
+}
+r = rank(-runs.aic)
+phi = 2*r/(P*(P+1))
+best.aic.gen[1] = best.aic
+
+# Process: one parent with probability proportional to fitness, other random
+for(j in 1:iter-1) {
+  for(i in 1:10){
+    rownum = sample(1:P, 1, prob=phi)
+    parent.1 = runs[rownum, ]
+    runs1 = runs[-c(rownum), ]
+    rownames(runs1) <- 1:nrow(runs1)
+    parent.2 = runs1[sample(1:(P-1), 1), ]
+    pos = sample(1:(m-1), 1)
+    mutate = rbinom(m, 1, mu)
+    runs.next[i,] = c(parent.1[1:pos], parent.2[(pos+1):m])
+    runs.next[i,] = (runs.next[i,] + mutate)%%2
+    mutate = rbinom(m, 1, mu)
+    runs.next[P+1-i,] = c(parent.2[1:pos],parent.1[(pos+1):m])
+    runs.next[P+1-i,] = (runs.next[P+1-i,] + mutate)%%2
+  }
+  runs = runs.next
+  
+  for(i in 1:P) {
+    run.vars = baseball.sub[, runs[i,]==1]
+    g = lm(salary.log~., run.vars)
+    runs.aic[i] = extractAIC(g)[2]
+    aics[i, j+1] = runs.aic[i]
+    if(runs.aic[i] < best.aic) {
+      run = runs[i,]
+      best.aic = runs.aic[i]
+    }
+  }
+  best.aic.gen[j+1] = best.aic
+  r = rank(-runs.aic)
+  phi = 2*r/(P*(P+1))
+}
+
+## Output
+run 		# Best list of predictors found
+best.aic 	# AIC value
+
+## Plotting AIC values
+plot(-aics, xlim=c(0, iter), ylim=c(50,425), type="n", ylab="Negative AIC",
+     xlab="Generation", main="AIC Values For Genetic Algorithm")
+for(i in 1:iter) {points(rep(i,P), -aics[,i], pch=20, cex=0.5)}
+
+
+# Question 3.4. c-i,ii
+m = ncol(baseball)-1
+P = 20
+iter = 100
+mu = 0.01   # mutation rate
+r = matrix(0, P, 1)
+phi = matrix(0, P, 1)
+runs = matrix(0, P, m)  # pop == runs
+runs.next = matrix(0, P, m)
+runs.aic = matrix(0, P, 1)  # runs.aic == AIC_fit
+aics = matrix(0, P, iter)
+run = NULL
+best.aic = 0
+best.aic.gen = rep(0, iter)
+
+## Initialization
+set.seed(123) 
+for(i in 1:P) {
+  runs[i, ] = rbinom(m, 1, 0.5)
+  run.vars = baseball.sub[, runs[i,]==1]  # base1 == run.vars
+  g = lm(salary.log~., run.vars)
+  runs.aic[i] = extractAIC(g)[2]
+  aics[i, 1] = runs.aic[i]
+  if(runs.aic[i] < best.aic){
+    run = runs[i, ]
+    best.aic = runs.aic[i]
+  }
+}
+r = rank(-runs.aic)
+phi = 2*r/(P*(P+1))
+best.aic.gen[1] = best.aic
+
+## c-i: same as Example 3.5
+## c-ii: each parent selected by probability proportional to fitness
+for(j in 1:iter-1) {
+  for(i in 1:10){
+    rownum = sample(1:P, 1, prob=phi)
+    parent.1 = runs[rownum, ]
+    runs1 = runs[-c(rownum), ]
+    rownames(runs1) <- 1:nrow(runs1)
+    phi2 = phi[-rownum]
+    parent.2 = runs1[sample(1:(P-1), 1, prob=phi2), ]
+    pos = sample(1:(m-1), 1)
+    mutate = rbinom(m, 1, mu)
+    runs.next[i,] = c(parent.1[1:pos], parent.2[(pos+1):m])
+    runs.next[i,] = (runs.next[i,] + mutate)%%2
+    mutate = rbinom(m, 1, mu)
+    runs.next[P+1-i,] = c(parent.2[1:pos],parent.1[(pos+1):m])
+    runs.next[P+1-i,] = (runs.next[P+1-i,] + mutate)%%2
+  }
+  runs = runs.next
+  
+  for(i in 1:P) {
+    run.vars = baseball.sub[, runs[i,]==1]
+    g = lm(salary.log~., run.vars)
+    runs.aic[i] = extractAIC(g)[2]
+    aics[i, j+1] = runs.aic[i]
+    if(runs.aic[i] < best.aic) {
+      run = runs[i,]
+      best.aic = runs.aic[i]
+    }
+  }
+  best.aic.gen[j+1] = best.aic
+  r = rank(-runs.aic)
+  phi = 2*r/(P*(P+1))
+}
+
+## Output
+run 		# Best list of predictors found
+best.aic 	# AIC value
+
+## Plotting AIC values
+plot(-aics, xlim=c(0, iter), ylim=c(50,425), type="n", ylab="Negative AIC",
+     xlab="Generation", main="AIC Values For Genetic Algorithm")
+for(i in 1:iter) {points(rep(i,P), -aics[,i], pch=20, cex=0.5)}

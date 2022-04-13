@@ -1,0 +1,120 @@
+---
+title: "Computing_HW3"
+author: "Dongeun Min"
+date: "11/11/2020"
+output: pdf_document
+---
+
+## Example 1: Multinomial Distribution
+```{r}
+library("Rcpp")
+current_path = rstudioapi::getActiveDocumentContext()$path
+setwd(dirname(current_path))
+sourceCpp("Computing_HW3_2020324011.cpp")
+
+# Initial values
+x = c(38, 34, 125)
+theta = 0.5
+p = c((0.5-0.5*theta), 0.25*theta, 0.25*theta, 0.5)
+iter = 40
+
+for (i in 1:iter){
+  n = multinom_e(x,p)
+  p = multinom_m(n)
+}
+
+# Output
+p 
+```
+
+
+## Example 2: Peppered Moths
+```{r}
+# Initial values
+x = c(85, 196, 341)
+n = rep(0,6)
+p = rep(1/3,3)
+iter = 40
+
+for(i in 1:iter){
+  n = allele_e(x,p)
+  p = allele_m(x,n)
+}
+
+# Output
+p    # Final estimate for probabilities (p_c, p_i, p_t)
+```
+
+
+## Exercise 4.1 (a),(b)
+```{r}
+# Initial values
+x = c(85, 196, 341, 578)
+n = rep(0,6)
+p = rep(1/3,3)
+iter = 40
+
+for(i in 1:iter){
+  n = moth_e(x,p)
+  p = moth_m(x,n)
+}
+
+# Output
+p    # Final estimate for probabilities (p_c, p_i, p_t)
+```
+
+
+## Exercise 4.2 (a),(b)
+* Conditions of x: x = (n_0, n_1, ... , n_16) and sum(x) = 1500  
+* parameter vector p: p = (alpha, beta, mu, lambda) 
+  
+Various initial values were tested below.
+```{r}
+# Initial values
+x = c(90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 
+      90, 90, 80, 80, 80)  # when n_i values are given similarly
+p = c(0.6, 0.3, 1, 10)
+iter = 100
+
+for(i in 1:iter){
+  n = hiv_e(x,p)
+  p = hiv_m(n)
+}
+
+# Output
+p
+```
+
+
+```{r}
+# Initial values
+x = c(370, 250, 200, 150, 100, 90, 70, 60, 50, 40, 30, 20, 
+      20, 20, 10, 10, 10)  # a more realistic version!
+p = c(0.6, 0.3, 1, 10)
+iter = 100
+
+for(i in 1:iter){
+  n = hiv_e(x,p)
+  p = hiv_m(n)
+}
+
+# Output
+p
+```
+
+
+```{r}
+x = c(380, 300, 222, 145, 110, 95, 70, 60, 45, 30, 24, 10, 5, 2, 0, 1, 1)
+p = c(0.6, 0.3, 1, 10)
+iter = 100
+
+for(i in 1:iter){
+  n = hiv_e(x,p)
+  p = hiv_m(n)
+}
+
+## Output
+p
+```
+
+When various initial values were tested, the last x, which was the most realistic version of initial values, calculated parameters alpha and beta much larger. Parameter mu was calculated slightly smaller, and lambda was also calculated smaller.

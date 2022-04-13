@@ -1,0 +1,283 @@
+---
+title: "Computing Final Exam"
+author: "Dongeun Min"
+date: "12/20/2020"
+output: pdf_document
+---
+
+## Settings
+```{r setup}
+library("Rcpp")
+
+# Compile C++ code and import function into R
+current_path = rstudioapi::getActiveDocumentContext()$path
+setwd(dirname(current_path))
+sourceCpp("Computing_Final_2020324011.cpp")
+```
+
+## Question 1.(a)
+```{r}
+h = function(x){
+  value = (cos(50*x)+sin(20*x))^2
+  return(value)
+}
+
+hprime1 = function(x){
+  value = 2 * (cos(50*x)+sin(20*x)) * (-50*sin(50*x)+20*cos(20*x));
+  return(value)
+}
+
+hprime2 = function(x){
+  temp1 = (-50*sin(50*x)+20*cos(20*x))^2;
+  temp2 = (cos(50*x)+sin(20*x))*(-2500*cos(50*x)-400*sin(20*x));
+  value = 2*(temp1 + temp2);
+  return(value)
+}
+
+# newton method
+newton = function(init, eps){
+  x = init;
+  i = 0;
+  diff = 1.0;
+  while(abs(diff) > eps){
+    diff = -hprime1(x)/hprime2(x)
+    x = x + diff
+    i = i + 1
+  } 
+  return(x)
+}
+```
+
+```{r}
+theta = seq(1e-7, 1-(1e-7), length=500)
+lv = theta
+for(i in 1:length(theta)){
+  lv[i] = h(theta[i])
+}
+plot(theta, lv, type="l")
+
+start = c(0.2, 0.3, 0.35, 0.38, 0.4, 0.5, 0.56, 0.6, 0.7, 0.8)
+x_hat = rep(0, 10)
+like = rep(0, 10)
+for (i in 1:length(start)){
+  x_hat[i] = newton(start[i], 1e-10)
+  like[i] = h(x_hat[i])
+  points(x_hat[i], h(x_hat[i]), col=i)
+}
+x_hat
+like
+```
+
+The maximum value is 3.832544.  
+  
+
+## Question 1.(b)
+```{r}
+x = matrix(0, 2500, 4)  #initial value = 0
+hval = matrix(0, 2500, 4)
+r = 0.5
+for (j in 1:4){
+  for (i in 1:2499){
+    a_t = max(x[i,j]-r, 0)
+    b_t = min(x[i,j]+r, 1)
+    u = runif(1, a_t, b_t)
+    T_t = 1/log(i)
+    ratio = min(exp((h(u)-h(x[i,j]))/T_t), 1)
+    prob = runif(1, 0, 1)
+    if (prob < ratio){
+      x[i+1,j] = u
+    } else {
+      x[i+1,j] = x[i,j] }
+    # update T_t and T_(t+1) ??
+  }
+}
+for (j in 1:4){
+  for (i in 1:2500){
+    hval[i,j] = h(x[i,j]) }}
+
+# Plotting
+theta = seq(1e-7, 1-(1e-7), length=500)
+lv = theta
+for (i in 1:length(theta)){
+  lv[i] = h(theta[i])
+}
+plot(theta, lv, type="l")
+for (i in 1:2500){
+  points(x[i,1], hval[i,1], col=2)
+  points(x[i,2], hval[i,2], col=3)
+  points(x[i,3], hval[i,3], col=4)
+  points(x[i,4], hval[i,4], col=5)
+}
+x[2500,]
+hval[2500,]
+```
+
+From the simulated annealing algorithm, it is found that the maximum value is 
+found when x is around 0.38 or 0.56.  
+The maximum value found is 0.83251.
+
+
+## Question 2.(b)
+```{r}
+rikz <- read.table("/Users/michelle/coursework/CS/rikz.txt", header = TRUE)
+Y = rikz[,1]  #Response Variable Y: Richness
+X = rikz[,3]  #Fixed Effect Variable X: NAP
+Z = rikz[,4]  #Random Effect Variable Z: Beach
+N = nrow(rikz)
+beta = 1  #initial value of beta
+D = 0.5  #initial value of D (= variance of b_i)
+sig = 0.5  #initial value of sigma(small)
+
+evec = rep(0,3*N)
+estep = function(x, y, z, b, d, s){
+  exp_s = rep(0,N)
+  exp_e = rep(0,N)
+  exp_u = rep(0,N)
+  for (i in 1:nrow(rikz)) {
+    sigma = d*(z[i]^2) + s^2
+    exp_s[i] = (d - (d^2)*(z[i]^2)/sigma) + (d*z[i]*(y[i]-x[i]*b)/sigma)^2
+    exp_e[i] = (s^2 - (s^2)/sigma) + (s*(y[i]-x[i]*b)/sigma)^2
+    exp_u[i] = d*z[i]*(y[i]-x[i]*b)/sigma
+  }
+  evec[1:N] = exp_s
+  evec[(N+1):(2*N)] = exp_e
+  evec[(2*N+1):(3*N)] = exp_u
+  return(evec)
+}
+mvec = rep(0,3)
+mstep = function(vec, x){
+  mvec[1] = mean(vec[1:N])
+  mvec[2] = mean(vec[(N+1):(2*N)])
+  sumx = 0; sume = 0
+  for (i in 1:nrow(rikz)) {
+    sumx = sumx + (x[i]^2)
+    sume = sume + x[i]*vec[2*N+i]
+  mvec[3] = sume/sumx
+  }
+  return(mvec)
+}
+
+iter = 100
+for (i in 1:iter){
+  e = estep(X,Y,Z,beta,D,sig)
+  p = mstep(e,X)
+}
+p  ## output
+```
+
+The estimates of D, sigma^2, and beta are 11.3333741, 7.7893444, -0.6510261.
+
+
+## Question 3
+```{r}
+data <- read.csv("/Users/michelle/coursework/CS/data.csv", header = TRUE)
+v = 6
+iter = 10  # get result of 100 patients: iter = 100
+# Calculate utility function with trapezoidal, simpson's rule
+utility1 = rep(0,iter)
+utility2 = rep(0,iter)
+for (i in 1:iter){
+  X = data[i,4]
+  W = data[i,1]
+  A = data[i,2]
+  utility1[i] = 0.5*u1trapezoid(X, W, A, 0, v/2, 1000) + 5*u2trapezoid(X, W, A, 0, v/2, 1000) + 
+  10*u1trapezoid(X, W, A, v/2, v, 1000) + 20*u2trapezoid(X, W, A, v/2, v, 1000)
+  utility2[i] = 0.5*u1simpson(X, W, A, 0, v/2, 1000) + 5*u2simpson(X, W, A, 0, v/2, 1000) + 
+  10*u1simpson(X, W, A, v/2, v, 1000) + 20*u2simpson(X, W, A, v/2, v, 1000)
+}
+utility1
+utility2
+```
+
+For the first 10 patients in the clinical data (data.csv), the utility function 
+calculated with numerical integration using the trapezoidal rule is shown in the 
+first line of the code output.  
+The utility function calculated with numerical integration using simpson's 
+rule is shown in the second line of the code output.  
+The result of the first 100 patients can also be calculated with the code above 
+(if 'iter' is changed to iter = 100), but it takes more time and the output 
+becomes much longer, so only 10 patients are shown above.  
+
+
+## Question 4
+```{r}
+# data import & preprocessing
+cancer = read.table("/Users/michelle/coursework/CS/UScancer.txt", colClasses = "character")
+cancer = as.matrix(cancer)
+cancer = strsplit(cancer, NULL)
+cancer = unlist(cancer)
+cancer = as.numeric(cancer)
+cancer = matrix(cancer, nrow = 58, byrow = T)
+cancer[cancer==0] <- -1
+cancer[cancer==2] <- 0
+
+# estimates
+mple = c(-0.3205, 0.1115)
+dmh = c(-0.3020, 0.1227)
+aex = c(-0.3017, 0.1224)
+
+# Bootstrap
+iter = 10
+table1 = cancer
+bias1 = 0
+s1sum1 = rep(0,iter)
+s2sum1 = rep(0,iter)
+s2sum11 = rep(0,iter)
+for (i in 1:iter){
+  table1 = bootstrap(table1, mple[1], mple[2])
+  bias1 = bias1 + (sum(table1) - sum(cancer))^2
+  s1sum1[i] = sum(table1)
+  s2sum1[i] = (rmse_s2(cancer, table1)[2] - rmse_s2(cancer, table1)[1])^2
+  s2sum11[i] = rmse_s2(cancer, table1)[2]
+}
+var1 = sum((s1sum1 - mean(s1sum1))^2) / iter
+bias11 = sum(s2sum1) / iter
+var11 = sum((s2sum11 - mean(s2sum11))^2) / iter
+rmse_s1_mple = sqrt(bias1+var1)
+rmse_s2_mple = sqrt(bias11+var11)
+
+table2 = cancer
+bias2 = 0
+s1sum2 = rep(0,iter)
+s2sum2 = rep(0,iter)
+s2sum22 = rep(0,iter)
+for (i in 1:iter){
+  table2 = bootstrap(table2, dmh[1], dmh[2])
+  bias2 = bias2 + (sum(table2) - sum(cancer))^2
+  s1sum2[i] = sum(table2)
+  s2sum2[i] = (rmse_s2(cancer, table2)[2] - rmse_s2(cancer, table2)[1])^2
+  s2sum22[i] = rmse_s2(cancer, table2)[2]
+}
+var2 = sum((s1sum2 - mean(s1sum2))^2) / iter
+bias22 = sum(s2sum2) / iter
+var22 = sum((s2sum22 - mean(s2sum22))^2) / iter
+rmse_s1_dmh = sqrt(bias2+var2)
+rmse_s2_dmh = sqrt(bias22+var22)
+
+table3 = cancer
+bias3 = 0
+s1sum3 = rep(0,iter)
+s2sum3 = rep(0,iter)
+s2sum33 = rep(0,iter)
+for (i in 1:iter){
+  table3 = bootstrap(table3, aex[1], aex[2])
+  bias3 = bias3 + (sum(table3) - sum(cancer))^2
+  s1sum3[i] = sum(table3)
+  s2sum3[i] = (rmse_s2(cancer, table3)[2] - rmse_s2(cancer, table3)[1])^2
+  s2sum33[i] = rmse_s2(cancer, table3)[2]
+}
+var3 = sum((s1sum3 - mean(s1sum3))^2) / iter
+bias33 = sum(s2sum3) / iter
+var33 = sum((s2sum33 - mean(s2sum33))^2) / iter
+rmse_s1_aex = sqrt(bias3+var3)
+rmse_s2_aex = sqrt(bias33+var33)
+
+# Calculate RMSE
+rmse_s1_mple; rmse_s1_dmh; rmse_s1_aex
+rmse_s2_mple; rmse_s2_dmh; rmse_s2_aex
+```
+
+The RMSE of alpha and beta is lowest when using estimation with MPLE (maximum 
+pseudo-likelihood estimator). The difference between each RMSE of estimates of 
+beta is smaller than alpha.
+

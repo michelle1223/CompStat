@@ -1,0 +1,87 @@
+---
+title: "Computing HW5"
+author: "Dongeun Min"
+date: "12/10/2020"
+output: pdf_document
+---
+
+## Problem 9.4(a)
+```{r}
+# make dataset
+R = c(68, 77, 299, 220, 142, 287, 276, 115, 64, 206, 222, 205, 233, 228, 188,
+      132, 285, 188, 224, 121, 311, 166, 248, 161, 226, 67, 201, 267, 121, 301,
+      244, 222, 195, 203, 210, 275, 286, 275, 304, 214)
+S = c(56, 62, 445, 279, 138, 428, 319, 102, 51, 289, 351, 282, 310, 266, 256,
+      144, 447, 186, 389, 113, 412, 176, 313, 162, 368, 54, 214, 429, 115, 407,
+      265, 301, 234, 229, 270, 478, 419, 490, 430, 235)
+table = data.frame(1/R, 1/S)
+```
+
+Observed data estimate
+```{r}
+set.seed(12345)
+model = lm(table[,1]~table[,2])
+theta = as.numeric(model$coefficients[1]/(1-model$coefficients[2]))
+theta
+```
+
+Bootstrapping residuals
+```{r}
+iter = 10000
+stable = rep(0,iter)
+
+model = lm(table[,1]~table[,2])
+fitted = as.numeric(model$fitted.values)
+res = data.frame(model$residuals)
+
+# Bootstrap residuals
+for(i in 1:iter){
+      newres = res[sample(1:length(res[,1]),replace=T),]
+      newY = fitted + newres
+      model1 = lm(newY~table[,2])
+      # when (1/R) = beta1 + beta2*(1/S) meets with (1/R) = (1/S) (45 degree line)
+      stable[i] = model1$coefficients[1] / (1-model1$coefficients[2])
+}
+ci = quantile(stable, c(0.025,0.975), na.rm=T)
+se = sd(stable)/sqrt(length(stable))
+ci  #confidence interval of estimate
+se  #standard error of estimate
+hist(stable)  #histogram of point estimate for stable population level (R=S)
+```
+
+Bootstrapping cases
+```{r}
+# Bootstrap cases (pairs)
+stable = rep(0,iter)
+
+for(i in 1:iter){
+      boot = table[sample(1:nrow(table),replace=T),]
+      model2 = lm(boot[,1]~boot[,2])
+      # when (1/R) = beta1 + beta2*(1/S) meets with (1/R) = (1/S) (45 degree line)
+      stable[i] = model2$coefficients[1] / (1-model2$coefficients[2])
+}
+ci = quantile(stable, c(0.025,0.975), na.rm=T)
+se = sd(stable)/sqrt(length(stable))
+ci  #confidence interval of estimate
+se  #standard error of estimate
+hist(stable)  #histogram of point estimate for stable population level (R=S)
+```
+
+The point estimate obtained from bootstrapping residuals has a larger standard 
+error and a wider confidence interval than the point estimate obtained from 
+bootstrapping cases. As the point estimate from the observed data is 0.00666233,
+the histogram of the point estimate obtained from bootstrapping cases shows that 
+it is slightly closer to the point estimate from the observed data (than the 
+point estimate obtained from bootstrapping residuals). However, both estimates 
+are close enough to the result of the observed data.  
+
+```{r}
+model1$coefficients
+model2$coefficients
+```
+
+Also, the Beverton-Holt model has the constraint of beta_1 and beta_2 being 
+non-negative, so the intercept and coefficient of model1 (bootstrapped with 
+residuals) and model2 (bootstrapped cases) may also be checked. Since it is 
+shown that both the intercept (beta_1) and coefficient (beta_2) are non-negative,
+no other constraint is needed.

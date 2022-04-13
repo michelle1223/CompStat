@@ -1,0 +1,69 @@
+library("Rcpp")
+current_path = rstudioapi::getActiveDocumentContext()$path
+setwd(dirname(current_path))
+sourceCpp("Computing_HW3_2020324011_민동은.cpp")
+
+# Example: Multinomial Distribution
+## Initial values
+x = c(38, 34, 125)
+theta = 0.5
+p = c((0.5-0.5*theta), 0.25*theta, 0.25*theta, 0.5)
+iter = 40
+
+for (i in 1:iter){
+  n = multinom_e(x,p)
+  p = multinom_m(n)
+}
+p  ## output
+
+
+# Example: Peppered Moths
+## Initial values
+x = c(85, 196, 341)
+n = rep(0,6)
+p = rep(1/3,3)
+iter = 40
+
+for(i in 1:iter){
+  n = allele_e(x,p)
+  p = allele_m(x,n)
+}
+
+## Output
+p    # Final estimate for probabilities (p_c, p_i, p_t)
+
+
+# Exercise 4.1 (a),(b)
+## Initial values
+x = c(85, 196, 341, 578)
+n = rep(0,6)  # not needed?
+p = rep(1/3,3)
+iter = 40
+
+for(i in 1:iter){
+  n = moth_e(x,p)
+  p = moth_m(x,n)
+}
+
+## Output
+p    # Final estimate for probabilities (p_c, p_i, p_t)
+
+
+# Exercise 4.2 (a),(b)
+## Initial values
+x = c(90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 
+      90, 90, 80, 80, 80)  # when n_i values are given similarly
+x = c(370, 250, 200, 150, 100, 90, 70, 60, 50, 40, 30, 20, 
+      20, 20, 10, 10, 10)  # a more realistic version!
+x = c(380, 300, 222, 145, 110, 95, 70, 60, 45, 30, 24, 10, 5, 2, 0, 1, 1)
+# x = (n_0, n_1, ... , n_16) and sum(x) = 1500
+p = c(0.6, 0.3, 1, 10)  # p = (alpha, beta, mu, lambda) 
+iter = 100
+
+for(i in 1:iter){
+  n = hiv_e(x,p)
+  p = hiv_m(n)
+}
+
+## Output
+p
